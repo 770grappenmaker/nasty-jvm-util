@@ -104,6 +104,59 @@ public class FinderContext(
             .onFailure { println("Failed to offer class $name"); it.printStackTrace() }
 
     /**
+     * Transforms a given class, by [className] and [bytes], that gets loaded in a certain [loader], using
+     * this [FinderContext]
+     */
+    public fun transform(
+        loader: ClassLoader,
+        className: String,
+        bytes: ByteArray
+    ): ByteArray? {
+        // Stop if this class is a system class
+        // (this prevents circular constructs and incorrect transformation)
+        val binaryName = className.replace('/', '.')
+        if (isSystemClass(binaryName) || skipTransform.any { binaryName.startsWith(it) }) return null
+
+        // Find the class node
+        val node = bytes.asClassNode()
+
+        // Offer this class
+        val result = offer(node, className, transform = true).getOrNull() ?: return null
+
+        // Filter out all transform requests
+        val transformRequests = result.filterIsInstance<ClassFinder.TransformRequest>()
+
+        // If no transform requests, end the transformation
+        if (transformRequests.isEmpty()) return null
+
+        // Find out if frames should be expanded
+        val shouldExpand = transformRequests.any { it.shouldExpand }
+        val computeFrames = transformRequests.all { it.allowComputeFrames }
+
+        // Find all method transforms
+        val transforms = transformRequests.flatMap { it.transforms }
+
+        // Don't transform when no transforms were yielded
+        if (transforms.isEmpty()) return null
+
+        if (debug) println("Transforming \"$className\" (processing ${transforms.size} transforms)...")
+
+        return runCatching {
+            node.transformDefault(
+                transforms,
+                originalBuffer = bytes,
+                loader,
+                computeFrames = computeFrames,
+                expand = shouldExpand,
+                debug = debug
+            )
+        }.onFailure {
+            println("Failed to transform class $className:")
+            it.printStackTrace()
+        }.getOrNull()
+    }
+
+    /**
      * Registers this finding context with an instrumentation instance.
      * That is, it goes over all loaded classes and offers it to finders,
      * as well as add a hook to classloading.
@@ -121,53 +174,7 @@ public class FinderContext(
                 classBeingRedefined: Class<*>?,
                 protectionDomain: ProtectionDomain,
                 classfileBuffer: ByteArray
-            ): ByteArray? {
-                // Stop if this class is a system class
-                // (this prevents circular constructs and incorrect transformation)
-                val binaryName = className.replace('/', '.')
-                if (isSystemClass(binaryName) || skipTransform.any { binaryName.startsWith(it) }) return null
-
-                // Find the class node
-                val node = classfileBuffer.asClassNode()
-
-                // Offer this class
-                val result = offer(node, className, transform = true).getOrNull() ?: return null
-
-                // Filter out all transform requests
-                val transformRequests = result.filterIsInstance<ClassFinder.TransformRequest>()
-
-                // If no transform requests, end the transformation
-                if (transformRequests.isEmpty()) return null
-
-                // Find out if frames should be expanded
-                val shouldExpand = transformRequests.any { it.shouldExpand }
-                val computeFrames = transformRequests.all { it.allowComputeFrames }
-
-                // Find all method transforms
-                val transforms = transformRequests.flatMap { it.transforms }
-
-                // Don't transform when no transforms were yielded
-                if (transforms.isEmpty()) return null
-
-                if (debug) {
-                    val prefix = if (classBeingRedefined == null) "Transforming" else "Retransforming"
-                    println("$prefix \"$className\" (processing ${transforms.size} transforms)...")
-                }
-
-                return runCatching {
-                    node.transformDefault(
-                        transforms,
-                        originalBuffer = classfileBuffer,
-                        loader,
-                        computeFrames = computeFrames,
-                        expand = shouldExpand,
-                        debug = debug
-                    )
-                }.onFailure {
-                    println("Failed to transform class $className:")
-                    it.printStackTrace()
-                }.getOrNull()
-            }
+            ) = transform(loader, className, classfileBuffer)
         })
     }
 }
