@@ -1,10 +1,7 @@
 package com.grappenmaker.jvmutil
 
-import org.objectweb.asm.ConstantDynamic
-import org.objectweb.asm.Handle
-import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
-import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.FieldNode
@@ -541,3 +538,6 @@ public val Type.boxedType: String
         Type.VOID -> "java/lang/Void"
         else -> error("type isn't primitive")
     }
+
+public fun ClassVisitor.visitField(desc: FieldDescription): FieldVisitor =
+    visitField(desc.access, desc.name, desc.descriptor, null, null)
