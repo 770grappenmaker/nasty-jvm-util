@@ -147,7 +147,7 @@ public fun internalGenerateAccessor(
 
     // Start generating class
     return generateClass(
-        name = accessorName,
+        name = fullAccessorName,
         implements = listOf(typeToImplement.internalName),
         defaultConstructor = false,
         loader = registry::loadAccessor
