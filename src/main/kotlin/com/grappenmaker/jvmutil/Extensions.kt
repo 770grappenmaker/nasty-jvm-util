@@ -143,7 +143,7 @@ public fun MethodNode.returns(toReturn: String): Boolean = Type.getReturnType(de
  * All package names/class name prefixes to ignore when finding app/Minecraft related classes
  */
 private val systemClasses = setOf(
-    "java.", "sun.", "jdk.", "com.sun.management.",
+    "java.", "javax.", "org.xml.", "org.w3c.", "sun.", "jdk.", "com.sun.management.",
     "com.grappenmaker.jvmutil.", "kotlin.", "kotlinx.", "org.objectweb.",
 )
 
