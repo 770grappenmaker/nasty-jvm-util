@@ -19,6 +19,9 @@ dependencies {
     api("org.ow2.asm:asm-commons:9.3")
     api("org.ow2.asm:asm-util:9.3")
     "reflectApi"("org.jetbrains.kotlin:kotlin-reflect:1.8.21")
+    "reflectApi"("org.ow2.asm:asm:9.3")
+    "reflectApi"("org.ow2.asm:asm-commons:9.3")
+    "reflectApi"("org.ow2.asm:asm-util:9.3")
 }
 
 kotlin {
