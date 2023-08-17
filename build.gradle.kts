@@ -25,6 +25,6 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(11)
+    jvmToolchain(8)
     explicitApi()
 }

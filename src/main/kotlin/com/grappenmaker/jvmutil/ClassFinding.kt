@@ -7,7 +7,6 @@ import org.objectweb.asm.util.TraceClassVisitor
 import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
 import java.lang.invoke.MethodType
-import java.lang.invoke.StringConcatFactory
 import java.lang.reflect.Method
 import java.security.ProtectionDomain
 import kotlin.properties.ReadOnlyProperty
@@ -1378,7 +1377,7 @@ public fun ClassFinder.useStringInfo(): Unit = onFound { node ->
     val toString = node.methodByName("toString") ?: return@onFound
     val indy = toString.instructions.filterIsInstance<InvokeDynamicInsnNode>().lastOrNull() ?: return@onFound
     if (
-        indy.bsm.owner != internalNameOf<StringConcatFactory>() ||
+        indy.bsm.owner != "java/lang/invoke/StringConcatFactory" ||
         indy.bsm.name != "makeConcatWithConstants"
     ) return@onFound
 
