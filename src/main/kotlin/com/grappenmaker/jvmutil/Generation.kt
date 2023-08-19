@@ -34,7 +34,34 @@ public inline fun generateClass(
     loader: (bytes: ByteArray, name: String) -> Class<*>,
     debug: Boolean = false,
     generator: ClassVisitor.() -> Unit
-): Class<*> {
+): Class<*> = loader(
+    generateClassBytes(name, extends, implements, defaultConstructor, access, writerFlags, version, debug, generator),
+    name.replace('/', '.')
+)
+
+/**
+ * Generates a class with given [name]
+ *
+ * @param [extends] internal name of the class to inherit from.
+ * @param [implements] list of internal names of interfaces to inherit from/implement.
+ * @param [defaultConstructor] determines if a simple ()V constructor with super() is generated.
+ * be careful: if the class that gets extended doesn't have a ()V of its own, it'll fail.
+ * @param [access] access flags for the new class.
+ * @param [writerFlags] flags to pass to ClassWriter.
+ * @param [version] Opcode that determines the class file version. Defaults to 1.8.
+ * @param [debug] whether to print the output of the class generation.
+ */
+public inline fun generateClassBytes(
+    name: String,
+    extends: String = "java/lang/Object",
+    implements: List<String> = listOf(),
+    defaultConstructor: Boolean = true,
+    access: Int = Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL,
+    writerFlags: Int = ClassWriter.COMPUTE_FRAMES,
+    version: Int = Opcodes.V1_8,
+    debug: Boolean = false,
+    generator: ClassVisitor.() -> Unit
+): ByteArray {
     val writer = ClassWriter(writerFlags)
     val visitor = if (debug) TraceClassVisitor(writer, PrintWriter(System.out)) else writer
     with(visitor) {
@@ -52,8 +79,7 @@ public inline fun generateClass(
         visitEnd()
     }
 
-    val bytes = writer.toByteArray()
-    return loader(bytes, name.replace('/', '.'))
+    return writer.toByteArray()
 }
 
 /**

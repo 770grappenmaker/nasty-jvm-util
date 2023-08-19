@@ -26,17 +26,21 @@ private var accessorCounter = 0
 //    return cl::create
 //}
 
-public class AccessorRegistry(parent: ClassLoader) : ClassLoader(parent) {
+public class AccessorRegistry(private val parentLoader: () -> ClassLoader) {
     public val accessors: MutableList<AccessorData<*, *>> = mutableListOf()
+    public val loader: ActualLoader by lazy { ActualLoader() }
 
-    public fun loadAccessor(bytes: ByteArray, name: String): Class<*> = defineClass(name, bytes, 0, bytes.size)
+    public inner class ActualLoader : ClassLoader(parentLoader()) {
+        public fun loadAccessor(bytes: ByteArray, name: String): Class<*> = defineClass(name, bytes, 0, bytes.size)
 
-    /**
-     * Finds [AccessorData] by an interface type's internal [name]
-     */
-    public fun findAccessor(name: String): AccessorData<*, *>? = accessors.find { it.virtualType.internalName == name }
+        /**
+         * Finds [AccessorData] by an interface type's internal [name]
+         */
+        public fun findAccessor(name: String): AccessorData<*, *>? =
+            accessors.find { it.virtualType.internalName == name }
 
-    public fun getAppClass(name: String): Class<*> = loadClass(name.replace('/', '.'))
+        public fun getAppClass(name: String): Class<*> = loadClass(name.replace('/', '.'))
+    }
 }
 
 public data class AccessorData<V : Any, S : StaticAccessor<V>>(
@@ -150,7 +154,7 @@ public fun internalGenerateAccessor(
         name = fullAccessorName,
         implements = listOf(typeToImplement.internalName),
         defaultConstructor = false,
-        loader = registry::loadAccessor
+        loader = registry.loader::loadAccessor
     ) {
         // Check if we need to implement StaticAccessor
         val isStaticAccessor = StaticAccessor::class.java in typeToImplement.interfaces
@@ -543,7 +547,7 @@ private fun MethodVisitor.loadAccessorParams(
         load(paramIndex, paramType)
 
         // Check if we need to unwrap an accessor
-        val accessorType = registry.findAccessor(paramType.internalName)
+        val accessorType = registry.loader.findAccessor(paramType.internalName)
         accessorType?.loadDelegate(this)
 
         // When reflected, push the parameter to the array
@@ -572,7 +576,7 @@ private fun MethodVisitor.getRegistry() {
     loadThis()
     visitMethodInsn(INVOKEVIRTUAL, "java/lang/Object", "getClass", "()Ljava/lang/Class;", false)
     visitMethodInsn(INVOKEVIRTUAL, "java/lang/Class", "getClassLoader", "()Ljava/lang/ClassLoader;", false)
-    cast(AccessorRegistry::class.java)
+    cast(AccessorRegistry.ActualLoader::class.java)
 }
 
 private fun MethodVisitor.wrapAccessor(accessorData: AccessorData<*, *>) {
@@ -581,7 +585,7 @@ private fun MethodVisitor.wrapAccessor(accessorData: AccessorData<*, *>) {
     // Ensure loaded when called
     getRegistry()
     loadConstant(accessorData.virtualType.internalName)
-    invokeMethod(AccessorRegistry::class.java.getMethod("findAccessor", String::class.java))
+    invokeMethod(AccessorRegistry.ActualLoader::class.java.getMethod("findAccessor", String::class.java))
     invokeMethod(AccessorData::class.java.getMethod("getVirtualAccessor"))
 //    invokeMethod(AccessorRegistry::findAccessor)
 //    getProperty(AccessorData<*, *>::virtualAccessor)
@@ -600,7 +604,7 @@ private fun MethodVisitor.wrapAccessor(accessorData: AccessorData<*, *>) {
 
 private fun MethodVisitor.returnAccessedValue(registry: AccessorRegistry, returnType: Type) {
     // Let's see if we need to return an accessor
-    val returnedAccessor = registry.findAccessor(returnType.internalName)
+    val returnedAccessor = registry.loader.findAccessor(returnType.internalName)
     if (returnedAccessor != null) {
         // Two paths: if returned value is null, do not make an accessor
         val label = Label()
@@ -633,7 +637,7 @@ public fun MethodVisitor.implInitREDs(
         // Find class to get all the methods from
         getRegistry()
         loadConstant(foundClass)
-        invokeMethod(AccessorRegistry::class.java.getMethod("getAppClass", String::class.java))
+        invokeMethod(AccessorRegistry.ActualLoader::class.java.getMethod("getAppClass", String::class.java))
 //        invokeMethod(AccessorRegistry::getAppClass)
 
         for (red in reflectedElements) {
@@ -653,7 +657,7 @@ public fun MethodVisitor.implInitREDs(
                     loadConstant(targetField.name)
 
                     // Get Field
-                    invokeMethod(Class::class.java.getMethod("getDeclaredField"))
+                    invokeMethod(Class::class.java.getMethod("getDeclaredField", String::class.java))
 //                    invokeMethod(Class<*>::getDeclaredField)
 
                     // Make Field accessible
@@ -680,7 +684,9 @@ public fun MethodVisitor.implInitREDs(
                         if (param.sort == Type.OBJECT) {
                             getRegistry()
                             loadConstant(param.className)
-                            invokeMethod(AccessorRegistry::class.java.getMethod("getAppClass", String::class.java))
+                            invokeMethod(
+                                AccessorRegistry.ActualLoader::class.java.getMethod("getAppClass", String::class.java)
+                            )
 //                            invokeMethod(::getAppClass)
                         } else loadTypeClass(param)
                         visitInsn(AASTORE)
