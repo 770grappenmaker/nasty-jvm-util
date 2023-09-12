@@ -3,6 +3,7 @@ package com.grappenmaker.jvmutil
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.util.TraceClassVisitor
 import java.io.ByteArrayOutputStream
@@ -275,7 +276,7 @@ public class MethodTransformContext(public val owner: ClassNode, public val meth
      * Allows you to replace a method call with some code
      */
     public fun replaceCall(
-        matcher: (MethodDescription) -> Boolean,
+        matcher: (MethodInsnNode) -> Boolean,
         matchOnce: Boolean = false,
         replacement: MethodVisitor.() -> Unit = {},
     ) {
@@ -290,7 +291,7 @@ public class MethodTransformContext(public val owner: ClassNode, public val meth
                     descriptor: String,
                     isInterface: Boolean
                 ) {
-                    val desc = MethodDescription(name, descriptor, owner, -1, isInterface)
+                    val desc = MethodInsnNode(opcode, owner, name, descriptor, isInterface)
                     if (matcher(desc) && (!hasMatched || !matchOnce)) {
                         replacement()
                         hasMatched = true
@@ -299,6 +300,16 @@ public class MethodTransformContext(public val owner: ClassNode, public val meth
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Allows you to replace a method call with some code using a [ReplaceCallContext]
+     */
+    public fun replaceCall(matcher: ReplaceCallContext.() -> Unit) {
+        val context = ReplaceCallContext().also(matcher)
+        replaceCall(context::matches, context.matchOnce) {
+            context.replacements.forEach { it() }
         }
     }
 

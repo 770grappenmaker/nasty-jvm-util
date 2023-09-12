@@ -1,5 +1,7 @@
 package com.grappenmaker.jvmutil
 
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.*
@@ -32,6 +34,21 @@ public class FinderContext(
     private var instrumentation: Instrumentation? = null
 
     public val isRegistered: Boolean get() = instrumentation != null
+
+    public fun transformClassBytes(
+        bytes: ByteArray,
+        loader: ClassLoader,
+        block: ClassContext.() -> Unit
+    ): ByteArray {
+        val name = ClassReader(bytes).className
+        val finder = ClassFinder(ClassContext().also(block).apply { node named name })
+
+        finders += finder
+        val result = transform(loader, name, bytes)
+        finders -= finder
+
+        return result ?: bytes
+    }
 
     /**
      * Allows you to apply a finder on a [ClassNode].
@@ -176,6 +193,11 @@ public class FinderContext(
             ) = transform(loader, className, classfileBuffer)
         })
     }
+}
+
+public fun FinderContext.findNamedClass(name: String, block: ClassContext.() -> Unit): ClassFinder = findClass {
+    node named name
+    block()
 }
 
 /**
@@ -1022,10 +1044,29 @@ public class MethodContext : Matchable<MethodData> {
 }
 
 /**
+ * DSL for defining a replacement for a [MethodInsnNode]
+ */
+@FindingDSL
+public class ReplaceCallContext : CallContextFacade() {
+    public var matchOnce: Boolean = false
+    internal val replacements = mutableListOf<MethodVisitor.() -> Unit>()
+
+    public fun replacement(block: MethodVisitor.() -> Unit) {
+        replacements += block
+    }
+}
+
+/**
  * DSL for defining matchers for a [MethodInsnNode]
  */
 @FindingDSL
-public class CallContext : Matchable<MethodInsnNode> {
+public class CallContext : CallContextFacade()
+
+/**
+ * Facade for creating DSL around a method call ([MethodInsnNode])
+ */
+@FindingDSL
+public sealed class CallContextFacade : Matchable<MethodInsnNode> {
     /**
      * Allows you to access infix functions of [MethodNodeMarker]
      */
@@ -1123,7 +1164,7 @@ public class CallContext : Matchable<MethodInsnNode> {
     }
 
     /**
-     * Checks if this [CallContext] matches a given [MethodInsnNode]
+     * Checks if this [CallContextFacade] matches a given [MethodInsnNode]
      */
     override fun matches(on: MethodInsnNode): Boolean = matchers.all { it(on) }
 }
