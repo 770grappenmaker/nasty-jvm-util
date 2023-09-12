@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.8.21"
+    kotlin("jvm") version "1.9.10"
     `java-library`
 }
 
@@ -10,18 +10,19 @@ java {
     registerFeature("reflect") { usingSourceSet(sourceSets["main"]) }
 }
 
+configurations {
+    getByName("reflectApi").extendsFrom(api.get())
+}
+
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    api("org.ow2.asm:asm:9.3")
-    api("org.ow2.asm:asm-commons:9.3")
-    api("org.ow2.asm:asm-util:9.3")
-    "reflectApi"("org.jetbrains.kotlin:kotlin-reflect:1.8.21")
-    "reflectApi"("org.ow2.asm:asm:9.3")
-    "reflectApi"("org.ow2.asm:asm-commons:9.3")
-    "reflectApi"("org.ow2.asm:asm-util:9.3")
+    api("org.ow2.asm:asm:9.5")
+    api("org.ow2.asm:asm-commons:9.5")
+    api("org.ow2.asm:asm-util:9.5")
+    "reflectApi"("org.jetbrains.kotlin:kotlin-reflect:1.9.10")
 }
 
 kotlin {
