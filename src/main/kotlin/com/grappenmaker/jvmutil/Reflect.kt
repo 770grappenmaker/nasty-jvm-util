@@ -1,13 +1,12 @@
 package com.grappenmaker.jvmutil
 
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Opcodes
 import kotlin.reflect.KFunction
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.KProperty
 import kotlin.reflect.jvm.javaConstructor
-import kotlin.reflect.jvm.javaMethod
 import kotlin.reflect.jvm.javaField
+import kotlin.reflect.jvm.javaMethod
 
 private fun assertReflect() {
     runCatching { Class.forName("kotlin.reflect.full.KClasses") }.onFailure {

@@ -310,16 +310,16 @@ public class ClassFinder(internal val context: ClassContext) : ElementFinder<Cla
     ) : OfferResult()
 
     // Returned when the class was found but the finder is not interested in transforming
-    internal object NotInterested : OfferResult()
+    internal data object NotInterested : OfferResult()
 
     // Returned when the class didn't match this finder
-    internal object NoMatch : OfferResult()
+    internal data object NoMatch : OfferResult()
 
     // Returned when transform = false, but there was interest to transform
-    internal object NoTransformRequest : OfferResult()
+    internal data object NoTransformRequest : OfferResult()
 
     // Returned when transform = false and the finder already resolved a class
-    internal object Skip : OfferResult()
+    internal data object Skip : OfferResult()
 
     /**
      * Assumes this [ClassFinder] has found the requested class/methods/fields
