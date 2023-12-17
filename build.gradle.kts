@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.9.20"
+    kotlin("jvm") version "1.9.21"
     `java-library`
 }
 
@@ -22,7 +22,7 @@ dependencies {
     api("org.ow2.asm:asm:9.5")
     api("org.ow2.asm:asm-commons:9.5")
     api("org.ow2.asm:asm-util:9.5")
-    "reflectApi"("org.jetbrains.kotlin:kotlin-reflect:1.9.10")
+    "reflectApi"("org.jetbrains.kotlin:kotlin-reflect:1.9.21")
 }
 
 kotlin {
