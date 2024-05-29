@@ -6,8 +6,16 @@ plugins {
 group = "com.grappenmaker"
 version = "0.1"
 
+sourceSets {
+    create("reflect") {
+        java {
+            srcDir("src/main/kotlin")
+        }
+    }
+}
+
 java {
-    registerFeature("reflect") { usingSourceSet(sourceSets["main"]) }
+    registerFeature("reflect") { usingSourceSet(sourceSets["reflect"]) }
 }
 
 configurations {
@@ -19,9 +27,9 @@ repositories {
 }
 
 dependencies {
-    api("org.ow2.asm:asm:9.5")
-    api("org.ow2.asm:asm-commons:9.5")
-    api("org.ow2.asm:asm-util:9.5")
+    api("org.ow2.asm:asm:9.7")
+    api("org.ow2.asm:asm-commons:9.7")
+    api("org.ow2.asm:asm-util:9.7")
     "reflectApi"("org.jetbrains.kotlin:kotlin-reflect:2.0.0")
 }
 
